@@ -38,10 +38,12 @@ function renderAgentPrompt(exp: Experiment): string {
   lines.push('- Search the existing codebase for similar implementations before writing new code.');
   lines.push('- Everything not explicitly mentioned in the variant stays unchanged from baseline.');
   lines.push(`- **Before claiming completion, verify every item in the completion checklist.** Status must be \`partial\` or \`inconclusive\` if any checklist item is incomplete, never \`success\`.`);
-  lines.push(`- After the run, update the row with \`"id": "${exp.id}"\` in \`experiments.jsonl\`. Do not modify other rows.`);
+  lines.push(`- **Write \`methods/${exp.id}.md\`** with the structured sections specified in the brief. This is required, not optional.`);
+  lines.push(`- **Commit your changes** with a message starting \`exp ${exp.id}:\` and capture the commit hash for the jsonl entry.`);
+  lines.push(`- After the run, update the row with \`"id": "${exp.id}"\` in \`experiments.jsonl\`, including \`methodFile\` and \`commitHash\`. Do not modify other rows.`);
   lines.push('');
   lines.push('---');
   lines.push('');
-  lines.push('*Recommended Claude Code permission mode: **Accept Edits** (file edits auto-allowed, bash commands still confirmed). Use `/permissions` to switch.*');
+  lines.push('*Recommended for Claude Code: press **Shift+Tab** to enable auto-accept edits (file edits auto-allowed, bash commands still confirmed).*');
   return lines.join('\n');
 }
