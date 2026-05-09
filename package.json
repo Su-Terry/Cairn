@@ -23,6 +23,12 @@
         "command": "cairn.helloWorld",
         "title": "Hello World",
         "category": "Cairn"
+      },
+      {
+        "command": "cairn.refreshExperiments",
+        "title": "Refresh",
+        "category": "Cairn",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -39,6 +45,15 @@
         {
           "id": "cairn.experiments",
           "name": "Experiments"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "cairn.refreshExperiments",
+          "when": "view == cairn.experiments",
+          "group": "navigation"
         }
       ]
     }
