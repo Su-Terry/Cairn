@@ -35,6 +35,12 @@
         "title": "New Experiment Brief",
         "category": "Cairn",
         "icon": "$(add)"
+      },
+      {
+        "command": "cairn.copyAgentPrompt",
+        "title": "Copy Agent Prompt",
+        "category": "Cairn",
+        "icon": "$(clippy)"
       }
     ],
     "viewsContainers": {
@@ -65,6 +71,18 @@
           "command": "cairn.refreshExperiments",
           "when": "view == cairn.experiments",
           "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "cairn.copyAgentPrompt",
+          "when": "view == cairn.experiments && viewItem =~ /^cairnExperiment\\./",
+          "group": "inline"
+        },
+        {
+          "command": "cairn.copyAgentPrompt",
+          "when": "view == cairn.experiments && viewItem =~ /^cairnExperiment\\./",
+          "group": "navigation"
         }
       ]
     }

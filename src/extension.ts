@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { ExperimentsProvider } from './experimentsProvider';
 import { createBriefCommand } from './createBrief';
+import { copyAgentPromptCommand } from './copyAgentPrompt';
+import { Experiment } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Cairn extension activated');
@@ -26,6 +28,14 @@ export function activate(context: vscode.ExtensionContext) {
     createBriefCommand
   );
   context.subscriptions.push(createBriefDisposable);
+
+  const copyPromptDisposable = vscode.commands.registerCommand(
+    'cairn.copyAgentPrompt',
+    (item: { experiment?: Experiment }) => {
+      return copyAgentPromptCommand(item?.experiment);
+    }
+  );
+  context.subscriptions.push(copyPromptDisposable);
 
   const watcher = vscode.workspace.createFileSystemWatcher('**/experiments.jsonl');
   watcher.onDidChange(() => experimentsProvider.refresh());

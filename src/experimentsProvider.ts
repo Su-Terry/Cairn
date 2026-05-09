@@ -41,10 +41,14 @@ class ExperimentItem extends vscode.TreeItem {
   constructor(
     label: string,
     description: string,
-    collapsibleState: vscode.TreeItemCollapsibleState
+    collapsibleState: vscode.TreeItemCollapsibleState,
+    public readonly experiment?: Experiment
   ) {
     super(label, collapsibleState);
     this.description = description;
+    if (experiment) {
+      this.contextValue = `cairnExperiment.${experiment.status}`;
+    }
   }
 
   static fromExperiment(exp: Experiment): ExperimentItem {
@@ -52,7 +56,7 @@ class ExperimentItem extends vscode.TreeItem {
     const metricSummary = formatMetrics(exp.metrics);
     const description = `${exp.method} · ${metricSummary} · ${exp.status}`;
 
-    const item = new ExperimentItem(label, description, vscode.TreeItemCollapsibleState.None);
+    const item = new ExperimentItem(label, description, vscode.TreeItemCollapsibleState.None, exp);
     item.tooltip = buildTooltip(exp);
     item.iconPath = new vscode.ThemeIcon(iconForStatus(exp.status));
     return item;
