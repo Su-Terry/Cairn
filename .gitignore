@@ -141,3 +141,13 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# VS Code extension specific
+*.vsix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local config
+.claude/
