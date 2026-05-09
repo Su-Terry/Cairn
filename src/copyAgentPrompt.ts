@@ -31,11 +31,17 @@ function renderAgentPrompt(exp: Experiment): string {
   const lines: string[] = [];
   lines.push(`Please implement the experiment described in \`${exp.brief}\`.`);
   lines.push('');
-  lines.push(`The brief contains the hypothesis, the variant, the success criterion, and explicit instructions on how to update \`experiments.jsonl\` after the run completes.`);
+  lines.push(`The brief contains the hypothesis, the variant, the success criterion, an explicit completion checklist, and instructions on how to update \`experiments.jsonl\` after the run completes.`);
   lines.push('');
   lines.push('Important reminders:');
   lines.push('- Do NOT fork new training scripts. Use config flags or new config files.');
   lines.push('- Search the existing codebase for similar implementations before writing new code.');
+  lines.push('- Everything not explicitly mentioned in the variant stays unchanged from baseline.');
+  lines.push(`- **Before claiming completion, verify every item in the completion checklist.** Status must be \`partial\` or \`inconclusive\` if any checklist item is incomplete, never \`success\`.`);
   lines.push(`- After the run, update the row with \`"id": "${exp.id}"\` in \`experiments.jsonl\`. Do not modify other rows.`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('*Recommended Claude Code permission mode: **Accept Edits** (file edits auto-allowed, bash commands still confirmed). Use `/permissions` to switch.*');
   return lines.join('\n');
 }
