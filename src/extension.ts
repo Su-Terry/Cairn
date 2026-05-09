@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ExperimentsProvider } from './experimentsProvider';
 import { createBriefCommand } from './createBrief';
 import { copyAgentPromptCommand } from './copyAgentPrompt';
+import { changeStatusCommand } from './changeStatus';
 import { Experiment } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -36,6 +37,14 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(copyPromptDisposable);
+
+  const changeStatusDisposable = vscode.commands.registerCommand(
+    'cairn.changeStatus',
+    (item: { experiment?: Experiment }) => {
+      return changeStatusCommand(item?.experiment);
+    }
+  );
+  context.subscriptions.push(changeStatusDisposable);
 
   const watcher = vscode.workspace.createFileSystemWatcher('**/experiments.jsonl');
   watcher.onDidChange(() => experimentsProvider.refresh());
