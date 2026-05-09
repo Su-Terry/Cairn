@@ -41,6 +41,12 @@
         "title": "Copy Agent Prompt",
         "category": "Cairn",
         "icon": "$(clippy)"
+      },
+      {
+        "command": "cairn.changeStatus",
+        "title": "Change Status",
+        "category": "Cairn",
+        "icon": "$(edit)"
       }
     ],
     "viewsContainers": {
@@ -81,6 +87,11 @@
         },
         {
           "command": "cairn.copyAgentPrompt",
+          "when": "view == cairn.experiments && viewItem =~ /^cairnExperiment\\./",
+          "group": "navigation"
+        },
+        {
+          "command": "cairn.changeStatus",
           "when": "view == cairn.experiments && viewItem =~ /^cairnExperiment\\./",
           "group": "navigation"
         }
