@@ -14,20 +14,22 @@ export async function createBriefCommand(): Promise<void> {
   }
   const rootUri = workspaceFolders[0].uri;
 
-  // Load existing experiments to suggest baseline + auto-id
   const existing = await loadExperiments();
+  const totalSteps = existing.length > 0 ? 6 : 5;
+  const stepLabel = (n: number) => `New Experiment Brief (${n}/${totalSteps})`;
 
   // ---------- Step 1: hypothesis ----------
   const hypothesis = await vscode.window.showInputBox({
-    title: 'New Experiment Brief (1/5)',
+    title: stepLabel(1),
     prompt: 'Hypothesis — what are we testing?',
-    placeHolder: 'e.g. Larger inner LR improves OOD generalization',
+    placeHolder: 'e.g. DiT should match U-Net on toy MNIST diffusion',
     ignoreFocusOut: true
   });
-  if (!hypothesis) return; // cancelled
+  if (!hypothesis) return;
 
-  // ---------- Step 2: baseline (pick from existing) ----------
+  // ---------- Step 2: baseline (skip if no existing experiments) ----------
   let baseline: string | undefined;
+  let stepOffset = 0;
   if (existing.length > 0) {
     const baselinePicks: vscode.QuickPickItem[] = [
       { label: '$(circle-slash) None — start from scratch', description: '' },
@@ -38,7 +40,7 @@ export async function createBriefCommand(): Promise<void> {
       }))
     ];
     const picked = await vscode.window.showQuickPick(baselinePicks, {
-      title: 'New Experiment Brief (2/5)',
+      title: stepLabel(2),
       placeHolder: 'Baseline — which experiment to fork from?',
       ignoreFocusOut: true
     });
@@ -46,31 +48,68 @@ export async function createBriefCommand(): Promise<void> {
     if (picked.label !== '$(circle-slash) None — start from scratch') {
       baseline = picked.label;
     }
+  } else {
+    stepOffset = -1;
   }
 
   // ---------- Step 3: variant ----------
   const variant = await vscode.window.showInputBox({
-    title: 'New Experiment Brief (3/5)',
-    prompt: 'Variant — what changes vs. the baseline?',
-    placeHolder: 'e.g. inner_lr 0.001 → 0.01',
+    title: stepLabel(3 + stepOffset),
+    prompt: 'Variant — what changes vs. baseline? (one sentence; everything else stays unchanged)',
+    placeHolder: 'e.g. Replace U-Net with DiT-Small (patch size 2)',
     ignoreFocusOut: true
   });
-  if (variant === undefined) return; // cancelled (empty string is allowed)
+  if (variant === undefined) return;
 
-  // ---------- Step 4: expected ----------
-  const expected = await vscode.window.showInputBox({
-    title: 'New Experiment Brief (4/5)',
-    prompt: 'Success criterion — when do we call this a win?',
-    placeHolder: 'e.g. val_acc_ood > 0.70',
+  // ---------- Step 4: success criterion ----------
+  const successCriterion = await vscode.window.showInputBox({
+    title: stepLabel(4 + stepOffset),
+    prompt: 'Success criterion — when do we call this a win? (include all dimensions: quality, speed, memory, etc.)',
+    placeHolder: 'e.g. val_acc_ood > 0.70 AND inference_latency < 50ms',
     ignoreFocusOut: true
   });
-  if (expected === undefined) return;
+  if (successCriterion === undefined) return;
 
-  // ---------- Step 5: method label ----------
+  // ---------- Step 5: completion checklist (multi-round, blank to finish) ----------
+  const checklistItems: string[] = [];
+  while (true) {
+    const itemNum = checklistItems.length + 1;
+    const itemTitle = `${stepLabel(5 + stepOffset)} — checklist item ${itemNum}`;
+    const promptText = checklistItems.length === 0
+      ? 'Completion checklist — concrete things that must be done before claiming completion. (Enter to add, blank to finish)'
+      : `Item ${itemNum} — (blank to finish; ${checklistItems.length} item(s) added)`;
+
+    const item = await vscode.window.showInputBox({
+      title: itemTitle,
+      prompt: promptText,
+      placeHolder: itemNum === 1
+        ? 'e.g. DiT trained 5000 steps on MNIST'
+        : 'e.g. U-Net baseline trained with same setup',
+      ignoreFocusOut: true
+    });
+
+    if (item === undefined) return;
+    if (item.trim() === '') break;
+
+    checklistItems.push(item.trim());
+  }
+
+  if (checklistItems.length === 0) {
+    const proceed = await vscode.window.showWarningMessage(
+      'Cairn: completion checklist is empty. Agent may hallucinate completion. Proceed anyway?',
+      'Proceed',
+      'Cancel'
+    );
+    if (proceed !== 'Proceed') return;
+  }
+
+  const completionChecklist = checklistItems.map(s => `- [ ] ${s}`).join('\n');
+
+  // ---------- Step 6: method ----------
   const method = await vscode.window.showInputBox({
-    title: 'New Experiment Brief (5/5)',
+    title: stepLabel(6 + stepOffset),
     prompt: 'Method label — name this method for the results table',
-    placeHolder: 'e.g. ours+meta',
+    placeHolder: 'e.g. dit-s2',
     value: baseline ? existing.find(e => e.id === baseline)?.method : undefined,
     ignoreFocusOut: true
   });
@@ -88,7 +127,8 @@ export async function createBriefCommand(): Promise<void> {
     hypothesis,
     baseline,
     variant,
-    expected,
+    successCriterion,
+    completionChecklist,
     method,
     baselineExperiment: baseline ? existing.find(e => e.id === baseline) : undefined
   });
@@ -114,13 +154,14 @@ export async function createBriefCommand(): Promise<void> {
     brief: briefPath,
     baseline,
     variant,
-    expected
+    successCriterion,
+    completionChecklist
   };
 
   const jsonlUri = vscode.Uri.joinPath(rootUri, 'experiments.jsonl');
   await appendJsonlRow(jsonlUri, newRow);
 
-  // ---------- Open the brief for user to review + give to agent ----------
+  // ---------- Open the brief for review ----------
   const doc = await vscode.workspace.openTextDocument(briefUri);
   await vscode.window.showTextDocument(doc);
 
@@ -144,7 +185,8 @@ interface BriefData {
   hypothesis: string;
   baseline?: string;
   variant: string;
-  expected: string;
+  successCriterion: string;
+  completionChecklist: string;
   method: string;
   baselineExperiment?: Experiment;
 }
@@ -167,9 +209,22 @@ function renderBrief(d: BriefData): string {
   lines.push('');
   lines.push(d.variant || '*(starting from scratch)*');
   lines.push('');
+  lines.push('*Everything not mentioned above stays unchanged from baseline.*');
+  lines.push('');
   lines.push('## Success criterion');
   lines.push('');
-  lines.push(d.expected || '*(no explicit criterion — judge qualitatively)*');
+  lines.push(d.successCriterion || '*(no explicit criterion — judge qualitatively)*');
+  lines.push('');
+
+  lines.push('## Completion checklist');
+  lines.push('');
+  lines.push('**Before claiming completion, every item below must be verified.**');
+  lines.push('');
+  if (d.completionChecklist.trim().length > 0) {
+    lines.push(d.completionChecklist);
+  } else {
+    lines.push('*(no checklist provided — at risk of hallucinated completion)*');
+  }
   lines.push('');
 
   if (d.baselineExperiment) {
@@ -192,14 +247,19 @@ function renderBrief(d: BriefData): string {
   lines.push('## Instructions for the agent');
   lines.push('');
   lines.push(`1. Implement the variant described above. ${d.baseline ? `Use \`${d.baseline}\` as the starting point.` : 'Start from a sensible baseline in the codebase.'}`);
-  lines.push(`2. Run the experiment using the existing training entry point. **Do not fork new \`train_*.py\` files** — use config flags or a new config file.`);
-  lines.push(`3. After the run completes, update \`experiments.jsonl\`:`);
+  lines.push(`2. Run the experiment using the existing training entry point. **Do not fork new \`train_*.py\` files** — use config flags or new config files.`);
+  lines.push(`3. **Before claiming completion, verify every item in the Completion checklist above.** Report which items are done and which are not. If any item is incomplete, status must be \`partial\` or \`inconclusive\`, not \`success\`.`);
+  lines.push(`4. Update \`experiments.jsonl\`:`);
   lines.push(`   - Find the row with \`"id": "${d.id}"\`.`);
-  lines.push(`   - Set \`"status"\` to \`"success"\` if metrics meet the criterion above, \`"failed"\` if the run errored or diverged, or \`"inconclusive"\` if the result is unclear.`);
+  lines.push(`   - Set \`"status"\` based on the checklist verification:`);
+  lines.push(`     - \`"success"\` only if all checklist items are done AND success criterion is met`);
+  lines.push(`     - \`"partial"\` if checklist is fully done but success criterion not fully met`);
+  lines.push(`     - \`"inconclusive"\` if some checklist items could not be completed`);
+  lines.push(`     - \`"failed"\` if the run errored or diverged`);
   lines.push(`   - Fill in \`"metrics"\` with the actual values measured.`);
   lines.push(`   - Add \`"config"\` pointing to the config file used.`);
-  lines.push(`   - Add a one-line \`"notes"\` describing what actually happened.`);
-  lines.push(`4. Do not modify other rows in \`experiments.jsonl\`.`);
+  lines.push(`   - Add a one-line \`"notes"\` describing what actually happened, including which checklist items were completed.`);
+  lines.push(`5. Do not modify other rows in \`experiments.jsonl\`.`);
   lines.push('');
   return lines.join('\n');
 }

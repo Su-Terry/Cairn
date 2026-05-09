@@ -74,6 +74,7 @@ function iconForStatus(status: Experiment['status']): string {
     case 'pending': return 'circle-outline';
     case 'running': return 'sync~spin';
     case 'success': return 'pass';
+    case 'partial': return 'pass-filled';
     case 'failed': return 'error';
     case 'inconclusive': return 'question';
   }
