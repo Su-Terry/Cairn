@@ -13,4 +13,8 @@ export interface Experiment {
   variant?: string;
   successCriterion?: string;
   completionChecklist?: string;
+
+  // Pass 3 additions
+  methodFile?: string;     // path to methods/exp_NNN.md
+  commitHash?: string;     // git commit at experiment completion
 }
