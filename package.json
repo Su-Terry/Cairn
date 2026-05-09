@@ -21,9 +21,27 @@
     "commands": [
       {
         "command": "cairn.helloWorld",
-        "title": "Hello World"
+        "title": "Hello World",
+        "category": "Cairn"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cairn",
+          "title": "Cairn",
+          "icon": "$(milestone)"
+        }
+      ]
+    },
+    "views": {
+      "cairn": [
+        {
+          "id": "cairn.experiments",
+          "name": "Experiments"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

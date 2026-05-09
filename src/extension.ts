@@ -1,26 +1,21 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { ExperimentsProvider } from './experimentsProvider';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  console.log('Cairn extension activated');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "cairn" is now active!');
+  // Hello World command (kept for now, useful for debugging)
+  const helloDisposable = vscode.commands.registerCommand('cairn.helloWorld', () => {
+    vscode.window.showInformationMessage('Hello World from Cairn!');
+  });
+  context.subscriptions.push(helloDisposable);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('cairn.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from cairn!');
-	});
-
-	context.subscriptions.push(disposable);
+  // Register the Experiments tree view
+  const experimentsProvider = new ExperimentsProvider();
+  const treeView = vscode.window.createTreeView('cairn.experiments', {
+    treeDataProvider: experimentsProvider
+  });
+  context.subscriptions.push(treeView);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
