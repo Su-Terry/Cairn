@@ -67,9 +67,10 @@ function formatMetrics(metrics: Record<string, number>): string {
 
 function iconForStatus(status: Experiment['status']): string {
   switch (status) {
+    case 'pending': return 'circle-outline';
+    case 'running': return 'sync~spin';
     case 'success': return 'pass';
     case 'failed': return 'error';
-    case 'running': return 'sync~spin';
     case 'inconclusive': return 'question';
   }
 }

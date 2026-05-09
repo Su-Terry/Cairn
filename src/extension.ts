@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ExperimentsProvider } from './experimentsProvider';
+import { createBriefCommand } from './createBrief';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Cairn extension activated');
@@ -9,20 +10,23 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(helloDisposable);
 
-  // Tree view + provider
   const experimentsProvider = new ExperimentsProvider();
   const treeView = vscode.window.createTreeView('cairn.experiments', {
     treeDataProvider: experimentsProvider
   });
   context.subscriptions.push(treeView);
 
-  // Manual refresh command
   const refreshDisposable = vscode.commands.registerCommand('cairn.refreshExperiments', () => {
     experimentsProvider.refresh();
   });
   context.subscriptions.push(refreshDisposable);
 
-  // Auto refresh: watch experiments.jsonl in any workspace folder
+  const createBriefDisposable = vscode.commands.registerCommand(
+    'cairn.createBrief',
+    createBriefCommand
+  );
+  context.subscriptions.push(createBriefDisposable);
+
   const watcher = vscode.workspace.createFileSystemWatcher('**/experiments.jsonl');
   watcher.onDidChange(() => experimentsProvider.refresh());
   watcher.onDidCreate(() => experimentsProvider.refresh());

@@ -29,6 +29,12 @@
         "title": "Refresh",
         "category": "Cairn",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "cairn.createBrief",
+        "title": "New Experiment Brief",
+        "category": "Cairn",
+        "icon": "$(add)"
       }
     ],
     "viewsContainers": {
@@ -51,9 +57,14 @@
     "menus": {
       "view/title": [
         {
+          "command": "cairn.createBrief",
+          "when": "view == cairn.experiments",
+          "group": "navigation@1"
+        },
+        {
           "command": "cairn.refreshExperiments",
           "when": "view == cairn.experiments",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ]
     }
