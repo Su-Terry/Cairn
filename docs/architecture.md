@@ -105,6 +105,7 @@ Fields (current as of Pass 5):
 - `baseline` — id of the direct parent experiment (the experiment this one forks from), if any. Cairn renders a Lineage section in the brief that traverses parent → grandparent → ... recursively, allowing agents to navigate the chain without re-running baselines.
 - `methodFile` — path to method.md (Pass 3)
 - `commitHash` — git SHA at experiment completion (Pass 3)
+- `executionMode` — `agent` (default) or `human`. Determines whether the agent runs training autonomously or hands off to the user. Pass 6-C.
 - `config` — path to config used
 
 ### `briefs/exp_NNN.md`
@@ -197,9 +198,6 @@ rather than a fixed plan.
 
 - **Mode hint generic-ization** — current brief mentions Shift+Tab
   for Claude Code 2.0.42; will date as Claude Code evolves.
-- **Commit message redundant prefix** — agents add `exp ` prefix to
-  `exp_NNN:` despite the template not asking for it. May be
-  unfixable through wording alone.
 - **Subjective criterion handling** — agents self-judge subjective
   criteria like "visually indistinguishable" rather than deferring
   to human review. Schema may need to mark which criteria require
@@ -226,8 +224,9 @@ rather than a fixed plan.
 
 ## Versioning
 
-Cairn 0.8 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A + Pass 6-B
-complete; brief workflow, method recording, parallel safety, decision
-rationale, lineage navigation, and LaTeX/Markdown table export all
-shipping. Pass 6-C onwards will address Auto-Brief, report draft
-generation, sibling/question layers, and three-tier actor support.
+Cairn 0.9 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A + Pass 6-B
++ Pass 6-C complete; brief workflow, method recording, parallel
+safety, decision rationale, lineage navigation, LaTeX/Markdown table
+export, and human-in-the-loop execution mode all shipping. Pass 6-D
+onwards will address Auto-Brief, report draft generation,
+sibling/question layers, and three-tier actor support beyond Diligent.
