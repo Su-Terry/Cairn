@@ -10,8 +10,24 @@ Last updated for Cairn 0.10.
 
 ## Step 1: Install Cairn
 
-Cairn is currently development-version only. Packaged installer is
-planned but not yet shipping.
+Cairn ships as a `.vsix` file. There are two ways to install it.
+
+### Option A: Install from `.vsix` (recommended)
+
+If you have access to a packaged `.vsix` (either downloaded from a
+GitHub release or shared by the maintainer):
+
+1. Open VS Code.
+2. `Cmd+Shift+P` (or `Ctrl+Shift+P`) → `Extensions: Install from VSIX...`
+3. Select the `.vsix` file.
+4. Reload VS Code if prompted.
+5. Click the Cairn icon in the activity bar (left sidebar).
+
+Done. Cairn is ready to use on any folder you open as a workspace.
+
+### Option B: Build from source (for developers)
+
+If you want to modify Cairn or contribute:
 
 Clone the Cairn repo somewhere on your machine:
 
