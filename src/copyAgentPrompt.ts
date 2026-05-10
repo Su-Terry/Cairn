@@ -40,6 +40,7 @@ function renderAgentPrompt(exp: Experiment): string {
   lines.push('- Search the existing codebase for similar implementations before writing new code.');
   lines.push('- Everything not explicitly mentioned in the variant stays unchanged from baseline.');
   lines.push(`- If this experiment forks from a parent (see \`## Lineage\` in the brief), use the parent's metrics from \`experiments.jsonl\` as your baseline anchor. Do NOT rerun the parent; reference its \`methodFile\` for implementation details.`);
+  lines.push(`- **Before writing code, follow the \`## Codebase exploration\` protocol in the brief.** Read the entry point, identify configs, and state your understanding back briefly. Skip exploration only for trivial single-parameter changes.`);
 
   if (isHumanMode) {
     lines.push(`- **Execution mode: Human.** You design and prepare the code; the user runs the training. Do NOT attempt to run training yourself. Provide the user with the exact command to run, then wait for them to report results.`);

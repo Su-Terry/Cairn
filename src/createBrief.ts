@@ -275,6 +275,20 @@ function renderBrief(d: BriefData): string {
     lines.push('');
   }
 
+  lines.push('## Codebase exploration');
+  lines.push('');
+  lines.push('Before implementing this variant, explore the workspace systematically:');
+  lines.push('');
+  lines.push('1. Read `README.md` if it exists; otherwise list root files for orientation.');
+  lines.push('2. Identify the training entry point (look for `train*.py`, `main.py`, `run.py`, or similar).');
+  lines.push('3. Identify config files (`configs/`, `*.yaml`, `*.json`).');
+  lines.push('4. Identify the baseline implementation — the parent referenced in `## Lineage` (if present), or relevant model files in this codebase.');
+  lines.push('5. Read the entry point and one representative config to understand how to invoke training.');
+  lines.push('6. State back briefly what you found before making changes.');
+  lines.push('');
+  lines.push('For incremental changes (e.g., flipping a single hyperparameter), step 6 can be very short. For new architectures or major refactors, take the time to understand the codebase deeply before writing.');
+  lines.push('');
+
   lines.push('## Instructions for the agent');
   lines.push('');
   if (d.executionMode === 'human') {
