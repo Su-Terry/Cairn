@@ -47,6 +47,12 @@
         "title": "Change Status",
         "category": "Cairn",
         "icon": "$(edit)"
+      },
+      {
+        "command": "cairn.exportTable",
+        "title": "Export Table",
+        "category": "Cairn",
+        "icon": "$(table)"
       }
     ],
     "viewsContainers": {
@@ -62,7 +68,8 @@
       "cairn": [
         {
           "id": "cairn.experiments",
-          "name": "Experiments"
+          "name": "Experiments",
+          "icon": "$(beaker)"
         }
       ]
     },

@@ -3,6 +3,7 @@ import { ExperimentsProvider } from './experimentsProvider';
 import { createBriefCommand } from './createBrief';
 import { copyAgentPromptCommand } from './copyAgentPrompt';
 import { changeStatusCommand } from './changeStatus';
+import { exportTableCommand } from './exportTable';
 import { Experiment } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -45,6 +46,14 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(changeStatusDisposable);
+
+  const exportTableDisposable = vscode.commands.registerCommand(
+    'cairn.exportTable',
+    () => {
+      return exportTableCommand();
+    }
+  );
+  context.subscriptions.push(exportTableDisposable);
 
   const watcher = vscode.workspace.createFileSystemWatcher('**/experiments.jsonl');
   watcher.onDidChange(() => experimentsProvider.refresh());
