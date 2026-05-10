@@ -17,4 +17,5 @@ export interface Experiment {
   // Pass 3 additions
   methodFile?: string;     // path to methods/exp_NNN.md
   commitHash?: string;     // git commit at experiment completion
+  executionMode?: 'agent' | 'human';
 }

@@ -16,7 +16,7 @@ export async function createBriefCommand(): Promise<void> {
   const rootUri = workspaceFolders[0].uri;
 
   const existing = await loadExperiments();
-  const totalSteps = existing.length > 0 ? 6 : 5;
+  const totalSteps = existing.length > 0 ? 7 : 6;
   const stepLabel = (n: number) => `New Experiment Brief (${n}/${totalSteps})`;
 
   // ---------- Step 1: hypothesis ----------
@@ -71,11 +71,33 @@ export async function createBriefCommand(): Promise<void> {
   });
   if (successCriterion === undefined) return;
 
-  // ---------- Step 5: completion checklist (multi-round, blank to finish) ----------
+  // ---------- Step 5: execution mode ----------
+  const modePicks: vscode.QuickPickItem[] = [
+    {
+      label: '$(robot) Agent',
+      description: 'Agent runs training and updates jsonl autonomously',
+      detail: 'Use when training fits in agent session (minutes to hours)'
+    },
+    {
+      label: '$(person) Human',
+      description: 'Agent designs; human runs training and reports back',
+      detail: 'Use when training is long (days), needs special hardware, or you want manual control'
+    }
+  ];
+  const modePick = await vscode.window.showQuickPick(modePicks, {
+    title: stepLabel(5 + stepOffset),
+    placeHolder: 'Execution mode — who runs the experiment?',
+    ignoreFocusOut: true
+  });
+  if (!modePick) return;
+  const executionMode: 'agent' | 'human' =
+    modePick.label.includes('Agent') ? 'agent' : 'human';
+
+  // ---------- Step 6: completion checklist (multi-round, blank to finish) ----------
   const checklistItems: string[] = [];
   while (true) {
     const itemNum = checklistItems.length + 1;
-    const itemTitle = `${stepLabel(5 + stepOffset)} — checklist item ${itemNum}`;
+    const itemTitle = `${stepLabel(6 + stepOffset)} — checklist item ${itemNum}`;
     const promptText = checklistItems.length === 0
       ? 'Completion checklist — concrete things that must be done before claiming completion. (Enter to add, blank to finish)'
       : `Item ${itemNum} — (blank to finish; ${checklistItems.length} item(s) added)`;
@@ -106,9 +128,9 @@ export async function createBriefCommand(): Promise<void> {
 
   const completionChecklist = checklistItems.map(s => `- [ ] ${s}`).join('\n');
 
-  // ---------- Step 6: method ----------
+  // ---------- Step 7: method ----------
   const method = await vscode.window.showInputBox({
-    title: stepLabel(6 + stepOffset),
+    title: stepLabel(7 + stepOffset),
     prompt: 'Method label — name this method for the results table',
     placeHolder: 'e.g. dit-s2',
     value: baseline ? existing.find(e => e.id === baseline)?.method : undefined,
@@ -132,7 +154,8 @@ export async function createBriefCommand(): Promise<void> {
     completionChecklist,
     method,
     baselineExperiment: baseline ? existing.find(e => e.id === baseline) : undefined,
-    allExperiments: existing
+    allExperiments: existing,
+    executionMode
   });
 
   // ---------- Write brief file ----------
@@ -157,7 +180,8 @@ export async function createBriefCommand(): Promise<void> {
     baseline,
     variant,
     successCriterion,
-    completionChecklist
+    completionChecklist,
+    executionMode
   };
 
   const jsonlUri = vscode.Uri.joinPath(rootUri, 'experiments.jsonl');
@@ -192,6 +216,7 @@ interface BriefData {
   method: string;
   baselineExperiment?: Experiment;
   allExperiments: Experiment[];
+  executionMode: 'agent' | 'human';
 }
 
 function renderBrief(d: BriefData): string {
@@ -252,9 +277,18 @@ function renderBrief(d: BriefData): string {
 
   lines.push('## Instructions for the agent');
   lines.push('');
+  if (d.executionMode === 'human') {
+    lines.push('**Execution mode:** Human-in-the-loop. You design the experiment; the user runs the training.');
+    lines.push('');
+  }
   lines.push(`1. Implement the variant described above. ${d.baseline ? `Use \`${d.baseline}\` as the starting point.` : 'Start from a sensible baseline in the codebase.'}`);
-  lines.push(`2. Run the experiment using the existing training entry point. **Do not fork new \`train_*.py\` files** — use config flags or new config files.`);
-  lines.push(`3. **Before claiming completion, verify every item in the Completion checklist above.** Report which items are done and which are not. If any item is incomplete, status must be \`partial\` or \`inconclusive\`, not \`success\`.`);
+  if (d.executionMode === 'agent') {
+    lines.push(`2. Run the experiment using the existing training entry point. **Do not fork new \`train_*.py\` files** — use config flags or new config files.`);
+    lines.push(`3. **Before claiming completion, verify every item in the Completion checklist above.** Report which items are done and which are not. If any item is incomplete, status must be \`partial\` or \`inconclusive\`, not \`success\`.`);
+  } else {
+    lines.push(`2. **Hand off to user for training.** Do NOT attempt to run training yourself. Tell the user explicitly: "I have prepared the code changes. Please run training with the following command: <command>" and provide the exact command to run. Wait for the user to report back with results.`);
+    lines.push(`3. **After the user reports results**, verify every item in the Completion checklist with the user. If items are incomplete, work with the user to determine status (\`partial\` / \`inconclusive\` / \`failed\`).`);
+  }
   lines.push(`4. Write \`methods/${d.id}.md\` documenting how you implemented this. Use the following structure (write "N/A" if a section doesn't apply, don't omit headings):`);
   lines.push('');
   lines.push('   ```markdown');
@@ -288,7 +322,11 @@ function renderBrief(d: BriefData): string {
   lines.push("   conflicts encountered. Write 'None' if nothing surprised you.");
   lines.push('   ```');
   lines.push('');
-  lines.push(`5. Commit your changes with \`git add -A && git commit -m "${d.id}: <one-line summary>"\`. Capture the commit hash from \`git rev-parse HEAD\`.`);
+  if (d.executionMode === 'agent') {
+    lines.push(`5. Commit your changes with \`git add -A && git commit -m "${d.id}: <one-line summary>"\`. Capture the commit hash from \`git rev-parse HEAD\`.`);
+  } else {
+    lines.push(`5. **The user commits.** After the user reports successful training, ask them to commit with: \`git add -A && git commit -m "${d.id}: <one-line summary>"\` and to share the commit hash with you.`);
+  }
   lines.push('');
   lines.push(`6. Update \`experiments.jsonl\` by **appending a new JSON line**. Do NOT rewrite the file or modify existing lines in place. Cairn deduplicates by id at read time (last entry wins).`);
   lines.push('');
