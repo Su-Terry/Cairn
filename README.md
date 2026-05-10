@@ -1,30 +1,62 @@
 # Cairn
 
-> Stop your AI coding agent from creating `train_v3_final_FINAL.py`.
+A research workflow management tool for AI-assisted experimentation.
 
-Cairn is a VS Code extension that marks every experiment with a stable waypoint—linking code, results, and intent—so you can find your way back when Claude Code or Cursor have been doing most of the typing.
+Cairn is a VS Code extension that manages the mechanical work of
+running experiments — brief creation, agent prompt standardization,
+metadata recording, and parallel-safe append-only logging — so that
+researchers can spend their time on the parts that need human
+judgment.
+
+Designed for three usage tiers:
+
+- **Diligent**: PI uses Cairn UI directly
+- **Lazy**: PI describes intent to an LLM, which produces Cairn-ready files
+- **Unchained**: An LLM/agent uses Cairn fully autonomously
 
 ## Status
 
-🚧 Early development. Not yet usable. Watch this repo for updates.
+Pre-release (0.6). Brief workflow, method recording, parallel safety,
+and decision rationale are all shipping. See
+[docs/architecture.md](docs/architecture.md) for the design charter
+and future direction.
 
-## Why
+## Concepts
 
-When AI coding agents drive most of the implementation, they tend to fork
-new scripts every time you try a new method—`train.py`, `train_v2.py`,
-`train_actually_works.py`—without leaving a clear stable version behind.
-Experiment results end up scattered across logs, W&B runs, and chat
-histories with the agent itself, making it slow to find what you need
-when writing weekly reports or papers. Cairn exists because I got tired
-of archaeology being part of my research workflow.
+A Cairn workspace is a paper. The workspace contains:
 
-## Roadmap
+- `experiments.jsonl` — append-only event log of all experiments
+- `briefs/exp_NNN.md` — frozen brief for each experiment
+- `methods/exp_NNN.md` — implementation notes written by the agent
+  after each run
+- `paper.md` or `paper.tex` — the paper this workspace is for
+  (researcher writes this; Cairn does not impose format)
 
-- [ ] Experiment browser (VS Code side panel)
-- [ ] Auto-link experiments to git commits
-- [ ] Figure attachment & preview
-- [ ] LaTeX macro for paper integration
+Cairn does not manage cross-paper relationships, raw datasets, or
+paper formatting. Use academic citation, DVC, and LaTeX respectively
+for those.
+
+## Quick start
+
+Cairn is currently development-version only. To use it:
+
+1. Clone this repo and run `npm install`
+2. Open the repo in VS Code and press F5 to launch an Extension
+   Development Host
+3. In the dev host, open any folder as your Cairn workspace
+4. Click the Cairn icon in the activity bar
+5. Click `+` to create a brief — Cairn walks you through 6 prompts
+6. Right-click the experiment row → "Copy Agent Prompt"
+7. Paste the prompt to your agent (Claude Code, Cursor, etc.)
+8. After the agent completes, `experiments.jsonl` and
+   `methods/exp_NNN.md` are populated
+
+## Design philosophy
+
+Cairn does the mechanical work; the researcher does the thinking. See
+[docs/architecture.md](docs/architecture.md) for the boundary between
+Cairn's responsibilities and the researcher's.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
