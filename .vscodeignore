@@ -1,7 +1,6 @@
 .vscode/**
 .vscode-test/**
 out/**
-node_modules/**
 src/**
 .gitignore
 .yarnrc
@@ -12,3 +11,13 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+
+# Exclude SDK platform-specific native binaries (Cairn uses user's installed `claude` CLI)
+node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/**
+node_modules/@anthropic-ai/claude-agent-sdk-linux-x64-musl/**
+node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64/**
+node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64-musl/**
+node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64/**
+node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/**
+node_modules/@anthropic-ai/claude-agent-sdk-win32-x64/**
+node_modules/@anthropic-ai/claude-agent-sdk-win32-arm64/**

@@ -5,6 +5,7 @@ import { copyAgentPromptCommand } from './copyAgentPrompt';
 import { changeStatusCommand } from './changeStatus';
 import { exportTableCommand } from './exportTable';
 import { Experiment } from './types';
+import { runAutoBrief } from './autoBrief';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Cairn extension activated');
@@ -30,6 +31,17 @@ export function activate(context: vscode.ExtensionContext) {
     createBriefCommand
   );
   context.subscriptions.push(createBriefDisposable);
+
+  const autoBriefDisposable = vscode.commands.registerCommand(
+    'cairn.autoBrief',
+    async () => {
+      const draft = await runAutoBrief();
+      // If draft is undefined (user cancelled or LLM failed), createBriefCommand
+      // runs in manual mode — same as clicking the regular `+` button.
+      await createBriefCommand(draft);
+    }
+  );
+  context.subscriptions.push(autoBriefDisposable);
 
   const copyPromptDisposable = vscode.commands.registerCommand(
     'cairn.copyAgentPrompt',

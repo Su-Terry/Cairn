@@ -74,6 +74,20 @@ choose Human mode. You can change modes per experiment.
 
 ## Step 4: Create your first brief
 
+### Option A: Auto-Brief (recommended for users with Claude Code installed)
+
+Click the sparkle icon (`✨`) in the Cairn panel title bar. Describe
+in one sentence what you want to test, and Cairn will draft the
+7 fields for you using your existing Claude Code session. Each
+field is then shown as an InputBox you can edit or accept with
+Enter.
+
+Auto-Brief requires `claude` to be in your PATH (i.e., you've run
+`claude login` previously). If Auto-Brief fails (network, auth, or
+parse error), Cairn falls back to manual brief creation.
+
+### Option B: Manual brief
+
 1. In the Cairn panel, click the `+` button.
 2. Cairn walks you through 6-7 prompts (depending on whether you
    choose a baseline). Answer each:

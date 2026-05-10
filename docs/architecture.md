@@ -224,9 +224,9 @@ rather than a fixed plan.
 
 ## Versioning
 
-Cairn 0.9 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A + Pass 6-B
-+ Pass 6-C complete; brief workflow, method recording, parallel
-safety, decision rationale, lineage navigation, LaTeX/Markdown table
-export, and human-in-the-loop execution mode all shipping. Pass 6-D
-onwards will address Auto-Brief, report draft generation,
-sibling/question layers, and three-tier actor support beyond Diligent.
+Cairn 0.11 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A + Pass 6-B
++ Pass 6-C + Pass 6-D + Pass 6-E complete; brief workflow, method
+recording, parallel safety, decision rationale, lineage navigation,
+LaTeX/Markdown table export, human-in-the-loop execution mode,
+codebase exploration protocol, and Auto-Brief (LLM-augmented brief
+drafting via Claude Agent SDK) all shipping.

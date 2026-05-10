@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 import { Experiment } from './types';
 import { loadExperiments } from './experimentStore';
 import * as fs from 'fs/promises';
+import { AutoBriefDraft } from './autoBriefPrompt';
 
 /**
  * Interactive workflow: ask user a series of questions,
  * then write both a brief markdown file and a pending row in experiments.jsonl.
  */
-export async function createBriefCommand(): Promise<void> {
+export async function createBriefCommand(draft?: AutoBriefDraft): Promise<void> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders || workspaceFolders.length === 0) {
     vscode.window.showErrorMessage('Cairn: open a workspace folder first.');
@@ -24,6 +25,7 @@ export async function createBriefCommand(): Promise<void> {
     title: stepLabel(1),
     prompt: 'Hypothesis — what are we testing?',
     placeHolder: 'e.g. DiT should match U-Net on toy MNIST diffusion',
+    value: draft?.hypothesis,
     ignoreFocusOut: true
   });
   if (!hypothesis) return;
@@ -33,16 +35,21 @@ export async function createBriefCommand(): Promise<void> {
   let stepOffset = 0;
   if (existing.length > 0) {
     const baselinePicks: vscode.QuickPickItem[] = [
-      { label: '$(circle-slash) None — start from scratch', description: '' },
+      { label: '$(circle-slash) None — start from scratch', description: 'No prior experiment to fork from' },
       ...existing.map(e => ({
         label: e.id,
         description: `${e.method} · ${e.status}`,
         detail: e.hypothesis
       }))
     ];
+
+    const placeholderText = draft?.baseline_id
+      ? `Auto-Brief suggested: ${draft.baseline_id} — pick or override`
+      : 'Baseline — which experiment to fork from?';
+
     const picked = await vscode.window.showQuickPick(baselinePicks, {
       title: stepLabel(2),
-      placeHolder: 'Baseline — which experiment to fork from?',
+      placeHolder: placeholderText,
       ignoreFocusOut: true
     });
     if (!picked) return;
@@ -56,8 +63,9 @@ export async function createBriefCommand(): Promise<void> {
   // ---------- Step 3: variant ----------
   const variant = await vscode.window.showInputBox({
     title: stepLabel(3 + stepOffset),
-    prompt: 'Variant — what changes vs. baseline? (one sentence; everything else stays unchanged)',
-    placeHolder: 'e.g. Replace U-Net with DiT-Small (patch size 2)',
+    prompt: 'Variant — what changes vs. baseline?',
+    placeHolder: 'e.g. add weight_decay=0.05, switch to AdamW',
+    value: draft?.variant,
     ignoreFocusOut: true
   });
   if (variant === undefined) return;
@@ -65,8 +73,9 @@ export async function createBriefCommand(): Promise<void> {
   // ---------- Step 4: success criterion ----------
   const successCriterion = await vscode.window.showInputBox({
     title: stepLabel(4 + stepOffset),
-    prompt: 'Success criterion — when do we call this a win? (include all dimensions: quality, speed, memory, etc.)',
-    placeHolder: 'e.g. val_acc_ood > 0.70 AND inference_latency < 50ms',
+    prompt: 'Success criterion — when do we call this a win?',
+    placeHolder: 'e.g. val_acc > 0.85 AND inference_latency < 50ms',
+    value: draft?.success_criterion,
     ignoreFocusOut: true
   });
   if (successCriterion === undefined) return;
@@ -84,59 +93,54 @@ export async function createBriefCommand(): Promise<void> {
       detail: 'Use when training is long (days), needs special hardware, or you want manual control'
     }
   ];
+
+  const modePlaceholder = draft?.execution_mode
+    ? `Auto-Brief suggested: ${draft.execution_mode} — pick or override`
+    : 'Execution mode — who runs the experiment?';
+
   const modePick = await vscode.window.showQuickPick(modePicks, {
     title: stepLabel(5 + stepOffset),
-    placeHolder: 'Execution mode — who runs the experiment?',
+    placeHolder: modePlaceholder,
     ignoreFocusOut: true
   });
   if (!modePick) return;
   const executionMode: 'agent' | 'human' =
     modePick.label.includes('Agent') ? 'agent' : 'human';
 
-  // ---------- Step 6: completion checklist (multi-round, blank to finish) ----------
-  const checklistItems: string[] = [];
-  while (true) {
-    const itemNum = checklistItems.length + 1;
-    const itemTitle = `${stepLabel(6 + stepOffset)} — checklist item ${itemNum}`;
-    const promptText = checklistItems.length === 0
-      ? 'Completion checklist — concrete things that must be done before claiming completion. (Enter to add, blank to finish)'
-      : `Item ${itemNum} — (blank to finish; ${checklistItems.length} item(s) added)`;
-
-    const item = await vscode.window.showInputBox({
-      title: itemTitle,
-      prompt: promptText,
-      placeHolder: itemNum === 1
-        ? 'e.g. DiT trained 5000 steps on MNIST'
-        : 'e.g. U-Net baseline trained with same setup',
-      ignoreFocusOut: true
-    });
-
-    if (item === undefined) return;
-    if (item.trim() === '') break;
-
-    checklistItems.push(item.trim());
+  // ---------- Step 6: completion checklist ----------
+  let completionChecklist: string;
+  if (draft?.completion_checklist && draft.completion_checklist.length > 0) {
+    // Auto-Brief mode: skip individual prompts, use draft's array
+    completionChecklist = draft.completion_checklist.map(s => `- ${s}`).join('\n');
+  } else {
+    // Manual mode: multi-round InputBox loop
+    const checklistItems: string[] = [];
+    let itemNum = 1;
+    while (true) {
+      const itemTitle = `${stepLabel(6 + stepOffset)} — checklist item ${itemNum}`;
+      const item = await vscode.window.showInputBox({
+        title: itemTitle,
+        prompt: `Item ${itemNum} (leave blank to finish)`,
+        placeHolder: 'e.g. trained 5000 steps with new config',
+        ignoreFocusOut: true
+      });
+      if (item === undefined) return;
+      if (item.trim().length === 0) break;
+      checklistItems.push(item);
+      itemNum++;
+    }
+    completionChecklist = checklistItems.map(s => `- ${s}`).join('\n');
   }
 
-  if (checklistItems.length === 0) {
-    const proceed = await vscode.window.showWarningMessage(
-      'Cairn: completion checklist is empty. Agent may hallucinate completion. Proceed anyway?',
-      'Proceed',
-      'Cancel'
-    );
-    if (proceed !== 'Proceed') return;
-  }
-
-  const completionChecklist = checklistItems.map(s => `- [ ] ${s}`).join('\n');
-
-  // ---------- Step 7: method ----------
+  // ---------- Step 7: method label ----------
   const method = await vscode.window.showInputBox({
     title: stepLabel(7 + stepOffset),
-    prompt: 'Method label — name this method for the results table',
-    placeHolder: 'e.g. dit-s2',
-    value: baseline ? existing.find(e => e.id === baseline)?.method : undefined,
+    prompt: 'Method label — short identifier for the results table',
+    placeHolder: 'e.g. dit-s2-wd, ppo-reward-v1',
+    value: draft?.method_label,
     ignoreFocusOut: true
   });
-  if (!method) return;
+  if (method === undefined || method.trim().length === 0) return;
 
   // ---------- Generate id ----------
   const nextId = generateNextId(existing);
