@@ -40,7 +40,7 @@ function renderAgentPrompt(exp: Experiment): string {
   lines.push(`- **Before claiming completion, verify every item in the completion checklist.** Status must be \`partial\` or \`inconclusive\` if any checklist item is incomplete, never \`success\`.`);
   lines.push(`- **Write \`methods/${exp.id}.md\`** with the structured sections specified in the brief. This is required, not optional.`);
   lines.push(`- **Commit your changes** with a message starting \`exp ${exp.id}:\` and capture the commit hash for the jsonl entry.`);
-  lines.push(`- After the run, update the row with \`"id": "${exp.id}"\` in \`experiments.jsonl\`, including \`methodFile\` and \`commitHash\`. Do not modify other rows.`);
+  lines.push(`- After the run, **append** an updated copy of the row with \`"id": "${exp.id}"\` to \`experiments.jsonl\` (including \`methodFile\` and \`commitHash\`). Use Bash \`echo '<json>' >> experiments.jsonl\` — do NOT use the Edit tool, do NOT rewrite the file. Cairn folds by id at read time.`);
   lines.push('');
   lines.push('---');
   lines.push('');
