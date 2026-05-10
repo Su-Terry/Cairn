@@ -102,7 +102,7 @@ Fields (current as of Pass 5):
   `failed`, `inconclusive`
 - `notes` — free-form post-run summary
 - `brief` — path to brief.md
-- `baseline` — id of parent experiment, if any
+- `baseline` — id of the direct parent experiment (the experiment this one forks from), if any. Cairn renders a Lineage section in the brief that traverses parent → grandparent → ... recursively, allowing agents to navigate the chain without re-running baselines.
 - `methodFile` — path to method.md (Pass 3)
 - `commitHash` — git SHA at experiment completion (Pass 3)
 - `config` — path to config used
@@ -158,10 +158,12 @@ rather than a fixed plan.
 
 ### High priority (next dogfood cycle is likely to need these)
 
-- **Decision tree / lineage navigation** — schema fields for parent,
-  sibling group, question; brief.md auto-renders lineage section so
-  agents can traverse without inlining baseline data; eliminates the
-  need to rerun baselines.
+- **Sibling group and question layer** — explicit grouping for
+  ablation batches (currently rely on naming conventions like
+  exp_002a/002b/002c) and the research question being answered by
+  a group of experiments. Lineage navigation (parent chain) is
+  already shipping as of Pass 6-A; sibling and question are the
+  remaining structural concepts.
 - **Question layer** — explicit grouping for ablation batches, which
   currently rely on naming conventions (e.g., exp_002a/002b/002c).
 - **Baseline reference mechanism** — anchor metrics to a frozen
@@ -226,6 +228,8 @@ rather than a fixed plan.
 
 ## Versioning
 
-Cairn 0.6 (current as of 2026-05-10) — Pass 1-5 complete; brief
-workflow, method recording, parallel safety, decision rationale all
-shipping. Pass 6+ will address lineage and three-tier actor support.
+Cairn 0.7 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A complete;
+brief workflow, method recording, parallel safety, decision
+rationale, and lineage navigation all shipping. Pass 6-B onwards
+will address Auto-Brief, report draft generation, LaTeX table
+export, sibling/question layers, and three-tier actor support.

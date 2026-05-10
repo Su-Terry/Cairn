@@ -131,7 +131,8 @@ export async function createBriefCommand(): Promise<void> {
     successCriterion,
     completionChecklist,
     method,
-    baselineExperiment: baseline ? existing.find(e => e.id === baseline) : undefined
+    baselineExperiment: baseline ? existing.find(e => e.id === baseline) : undefined,
+    allExperiments: existing
   });
 
   // ---------- Write brief file ----------
@@ -190,6 +191,7 @@ interface BriefData {
   completionChecklist: string;
   method: string;
   baselineExperiment?: Experiment;
+  allExperiments: Experiment[];
 }
 
 function renderBrief(d: BriefData): string {
@@ -229,19 +231,22 @@ function renderBrief(d: BriefData): string {
   lines.push('');
 
   if (d.baselineExperiment) {
-    lines.push('## Baseline reference');
+    const chain = buildLineageChain(d.baselineExperiment, d.allExperiments);
+    lines.push('## Lineage');
     lines.push('');
-    lines.push(`- ID: \`${d.baselineExperiment.id}\``);
-    lines.push(`- Method: \`${d.baselineExperiment.method}\``);
-    lines.push(`- Hypothesis: ${d.baselineExperiment.hypothesis}`);
-    if (Object.keys(d.baselineExperiment.metrics).length > 0) {
-      const metricStr = Object.entries(d.baselineExperiment.metrics)
-        .map(([k, v]) => `${k}=${v}`).join(', ');
-      lines.push(`- Metrics: ${metricStr}`);
+    lines.push(`This experiment forks from \`${d.baselineExperiment.id}\`.`);
+    lines.push('');
+    lines.push('Chain (most recent first):');
+    for (const exp of chain) {
+      const summary = formatLineageEntry(exp);
+      lines.push(`- ${summary}`);
     }
-    if (d.baselineExperiment.config) {
-      lines.push(`- Config: \`${d.baselineExperiment.config}\``);
-    }
+    lines.push('');
+    lines.push('**For agents implementing this experiment:**');
+    lines.push('- Read parent metrics from `experiments.jsonl` (find the row with the parent\'s id)');
+    lines.push('- Use parent metrics as the baseline anchor; do NOT rerun the parent');
+    lines.push('- Reference parent\'s `methodFile` for implementation details');
+    lines.push('- Recursively traverse the chain above if you need deeper context');
     lines.push('');
   }
 
@@ -320,4 +325,38 @@ async function appendJsonlRow(uri: vscode.Uri, row: Experiment): Promise<void> {
   // fs.appendFile uses O_APPEND under the hood — atomic for writes ≤ PIPE_BUF.
   // Local filesystem only; would need a different strategy for remote/virtual fs.
   await fs.appendFile(uri.fsPath, line, 'utf-8');
+}
+
+/**
+ * Build the lineage chain by traversing baseline links recursively.
+ * Returns array with [direct parent, grandparent, ...] order.
+ */
+function buildLineageChain(start: Experiment, allExps: Experiment[]): Experiment[] {
+  const byId = new Map(allExps.map(e => [e.id, e]));
+  const chain: Experiment[] = [];
+  let current: Experiment | undefined = start;
+  const visited = new Set<string>();
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    chain.push(current);
+    if (current.baseline) {
+      current = byId.get(current.baseline);
+    } else {
+      current = undefined;
+    }
+  }
+  return chain;
+}
+
+function formatLineageEntry(exp: Experiment): string {
+  const parts: string[] = [`\`${exp.id}\``];
+  parts.push(`(${exp.method}, ${exp.status})`);
+  const m = exp.metrics;
+  const keyMetric =
+    m.loss_difference_percent !== undefined ? `gap=${m.loss_difference_percent}%` :
+    m.dit_final_loss !== undefined ? `loss=${m.dit_final_loss}` :
+    Object.keys(m).length > 0 ? `${Object.keys(m).length} metrics` :
+    'no metrics';
+  parts.push(keyMetric);
+  return parts.join(' ');
 }

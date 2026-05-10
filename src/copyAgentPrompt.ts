@@ -37,6 +37,7 @@ function renderAgentPrompt(exp: Experiment): string {
   lines.push('- Do NOT fork new training scripts. Use config flags or new config files.');
   lines.push('- Search the existing codebase for similar implementations before writing new code.');
   lines.push('- Everything not explicitly mentioned in the variant stays unchanged from baseline.');
+  lines.push(`- If this experiment forks from a parent (see \`## Lineage\` in the brief), use the parent's metrics from \`experiments.jsonl\` as your baseline anchor. Do NOT rerun the parent; reference its \`methodFile\` for implementation details.`);
   lines.push(`- **Before claiming completion, verify every item in the completion checklist.** Status must be \`partial\` or \`inconclusive\` if any checklist item is incomplete, never \`success\`.`);
   lines.push(`- **Write \`methods/${exp.id}.md\`** with the six structured sections specified in the brief (Architecture, Hyperparameters, What is specifically different from baseline, Design rationale, Design decisions worth noting, Notable observations). This is required, not optional. Especially the **Design rationale** section: explicitly justify any parameter choices not dictated by the brief.`);
   lines.push(`- **Commit your changes** with a message starting \`exp ${exp.id}:\` and capture the commit hash for the jsonl entry.`);
