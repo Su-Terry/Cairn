@@ -188,8 +188,6 @@ rather than a fixed plan.
 - **Report draft generation** — automated dump of jsonl + methods/ to
   a markdown report skeleton, with TL;DR/Setup/Conclusion sections
   left blank for the researcher.
-- **LaTeX table export** — generate `\begin{tabular}` blocks from
-  filtered jsonl rows, for direct paste into a paper.
 - **Brief clarity for "do not fork training scripts"** — agents have
   twice rationalized this as creating new entry-point files.
   Instruction may need stronger wording or schema-level designation
@@ -228,8 +226,8 @@ rather than a fixed plan.
 
 ## Versioning
 
-Cairn 0.7 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A complete;
-brief workflow, method recording, parallel safety, decision
-rationale, and lineage navigation all shipping. Pass 6-B onwards
-will address Auto-Brief, report draft generation, LaTeX table
-export, sibling/question layers, and three-tier actor support.
+Cairn 0.8 (current as of 2026-05-10) — Pass 1-5 + Pass 6-A + Pass 6-B
+complete; brief workflow, method recording, parallel safety, decision
+rationale, lineage navigation, and LaTeX/Markdown table export all
+shipping. Pass 6-C onwards will address Auto-Brief, report draft
+generation, sibling/question layers, and three-tier actor support.
