@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Experiment } from './types';
 import { loadExperiments } from './experimentStore';
+import * as fs from 'fs/promises';
 
 /**
  * Interactive workflow: ask user a series of questions,
@@ -269,45 +270,39 @@ function renderBrief(d: BriefData): string {
   lines.push('');
   lines.push(`5. Commit your changes with \`git add -A && git commit -m "${d.id}: <one-line summary>"\`. Capture the commit hash from \`git rev-parse HEAD\`.`);
   lines.push('');
-  lines.push(`6. Update \`experiments.jsonl\`:`);
-  lines.push(`   - Find the row with \`"id": "${d.id}"\`.`);
+  lines.push(`6. Update \`experiments.jsonl\` by **appending a new JSON line**. Do NOT rewrite the file or modify existing lines in place. Cairn deduplicates by id at read time (last entry wins).`);
+  lines.push('');
+  lines.push(`   Build the updated row:`);
+  lines.push(`   - Read the current row with \`"id": "${d.id}"\` to get existing values`);
   lines.push(`   - Set \`"status"\` based on the checklist verification:`);
   lines.push(`     - \`"success"\` only if all checklist items are done AND success criterion is met`);
   lines.push(`     - \`"partial"\` if checklist is fully done but success criterion not fully met`);
   lines.push(`     - \`"inconclusive"\` if some checklist items could not be completed`);
   lines.push(`     - \`"failed"\` if the run errored or diverged`);
-  lines.push(`   - Fill in \`"metrics"\` with the actual values measured.`);
-  lines.push(`   - Add \`"config"\` pointing to the config file used.`);
-  lines.push(`   - Add \`"methodFile": "methods/${d.id}.md"\`.`);
-  lines.push(`   - Add \`"commitHash"\` with the hash from step 5.`);
-  lines.push(`   - Add a one-line \`"notes"\` describing what actually happened, including which checklist items were completed.`);
-  lines.push(`7. Do not modify other rows in \`experiments.jsonl\`.`);
+  lines.push(`   - Fill in \`"metrics"\` with the actual values measured`);
+  lines.push(`   - Add \`"config"\` pointing to the config file used`);
+  lines.push(`   - Add \`"methodFile": "methods/${d.id}.md"\``);
+  lines.push(`   - Add \`"commitHash"\` with the hash from step 5`);
+  lines.push(`   - Add a one-line \`"notes"\` describing what actually happened`);
+  lines.push('');
+  lines.push(`   **Write to file using append, not overwrite:**`);
+  lines.push(`   - Use \`echo '<single-line JSON>' >> experiments.jsonl\` from a shell`);
+  lines.push(`   - Or open the file with mode \`'a'\` (Python), \`O_APPEND\` (C), or equivalent`);
+  lines.push(`   - **Do NOT use the Edit tool on \`experiments.jsonl\`.** Edit tool rewrites the file and breaks parallel safety. Use Bash \`echo >>\` instead.`);
+  lines.push('');
+  lines.push(`7. Do not delete or modify existing lines in \`experiments.jsonl\`. The file is append-only history; Cairn folds by id when reading.`);
   lines.push('');
   return lines.join('\n');
 }
 
+/**
+ * Append a row to experiments.jsonl using O_APPEND (atomic for small writes).
+ * Multiple concurrent writers are safe up to PIPE_BUF (4KB on Linux).
+ * Cairn relies on fold-by-id at read time to handle multiple entries per experiment.
+ */
 async function appendJsonlRow(uri: vscode.Uri, row: Experiment): Promise<void> {
   const line = JSON.stringify(row) + '\n';
-  let existingBytes: Uint8Array;
-  try {
-    existingBytes = await vscode.workspace.fs.readFile(uri);
-  } catch {
-    existingBytes = new Uint8Array(0);
-  }
-
-  // Ensure existing content ends with \n before appending
-  let prefix = existingBytes;
-  if (existingBytes.length > 0 && existingBytes[existingBytes.length - 1] !== 0x0a) {
-    const merged = new Uint8Array(existingBytes.length + 1);
-    merged.set(existingBytes);
-    merged[existingBytes.length] = 0x0a;
-    prefix = merged;
-  }
-
-  const lineBytes = new TextEncoder().encode(line);
-  const newBytes = new Uint8Array(prefix.length + lineBytes.length);
-  newBytes.set(prefix);
-  newBytes.set(lineBytes, prefix.length);
-
-  await vscode.workspace.fs.writeFile(uri, newBytes);
+  // fs.appendFile uses O_APPEND under the hood — atomic for writes ≤ PIPE_BUF.
+  // Local filesystem only; would need a different strategy for remote/virtual fs.
+  await fs.appendFile(uri.fsPath, line, 'utf-8');
 }

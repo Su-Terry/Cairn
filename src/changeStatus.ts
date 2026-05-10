@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Experiment } from './types';
+import * as fs from 'fs/promises';
 
 type Status = Experiment['status'];
 
@@ -54,45 +55,42 @@ export async function changeStatusCommand(experiment: Experiment | undefined): P
 }
 
 /**
- * Read jsonl, update the row matching `id`, write back.
- * Preserves all other rows untouched.
+ * Append a copy of the experiment row with new status.
+ * Cairn folds by id at read time (last entry wins), so this is parallel-safe.
+ * Original rows remain in the file as history.
  */
 async function updateExperimentStatus(
   uri: vscode.Uri,
   id: string,
   newStatus: Status
 ): Promise<void> {
+  // Read existing rows to find the current full row for this id
   const bytes = await vscode.workspace.fs.readFile(uri);
   const text = new TextDecoder('utf-8').decode(bytes);
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
 
-  const lines = text.split('\n');
-  let updated = false;
-
-  const newLines = lines.map(line => {
-    if (line.trim().length === 0) return line;
+  // Find the most recent row matching this id (last write wins, same as load logic)
+  let currentRow: Experiment | null = null;
+  for (let i = lines.length - 1; i >= 0; i--) {
     try {
-      const exp = JSON.parse(line);
-      if (exp.id === id) {
-        exp.status = newStatus;
-        updated = true;
-        return JSON.stringify(exp);
+      const parsed = JSON.parse(lines[i]) as Experiment;
+      if (parsed.id === id) {
+        currentRow = parsed;
+        break;
       }
-      return line;
     } catch {
-      // Malformed line — leave it alone, don't risk corrupting it
-      return line;
+      // Skip malformed lines
     }
-  });
+  }
 
-  if (!updated) {
+  if (!currentRow) {
     throw new Error(`row with id "${id}" not found in experiments.jsonl`);
   }
 
-  // Ensure trailing newline
-  let output = newLines.join('\n');
-  if (!output.endsWith('\n')) {
-    output += '\n';
-  }
+  // Build updated row (new status, everything else preserved)
+  const updatedRow: Experiment = { ...currentRow, status: newStatus };
 
-  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(output));
+  // Append the updated row — fold-by-id at read time will surface this as canonical
+  const line = JSON.stringify(updatedRow) + '\n';
+  await fs.appendFile(uri.fsPath, line, 'utf-8');
 }
