@@ -150,4 +150,5 @@ vite.config.ts.timestamp-*
 Thumbs.db
 
 # Claude Code local config
-.claude/
+.claude/scripts/
+*.vsix

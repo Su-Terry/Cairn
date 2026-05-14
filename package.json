@@ -2,7 +2,7 @@
   "name": "cairn",
   "displayName": "Cairn",
   "description": "Mark every experiment with a stable waypoint",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "publisher": "su-terry",
   "license": "MIT",
   "repository": {
@@ -59,6 +59,12 @@
         "title": "Auto-Brief",
         "category": "Cairn",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "cairn.autoBriefFromFile",
+        "title": "Auto-Brief from File",
+        "category": "Cairn",
+        "icon": "$(file-text)"
       }
     ],
     "viewsContainers": {
@@ -85,6 +91,11 @@
           "command": "cairn.autoBrief",
           "when": "view == cairn.experiments",
           "group": "navigation@1"
+        },
+        {
+          "command": "cairn.autoBriefFromFile",
+          "when": "view == cairn.experiments",
+          "group": "navigation@1.5"
         },
         {
           "command": "cairn.createBrief",
@@ -139,6 +150,7 @@
     "esbuild": "^0.27.3",
     "eslint": "^9.39.3",
     "npm-run-all": "^4.1.5",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1"
   },

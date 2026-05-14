@@ -5,6 +5,45 @@ import * as fs from 'fs/promises';
 import { AutoBriefDraft } from './autoBriefPrompt';
 
 /**
+ * Get field labels for InputBox prompts based on detected work type mode.
+ */
+function getFieldLabels(mode?: AutoBriefDraft['detected_mode']): {
+  hypothesis: string;
+  variant: string;
+  successCriterion: string;
+} {
+  switch (mode) {
+    case 'infrastructure':
+    case 'retroactive_infrastructure':
+      return {
+        hypothesis: 'Purpose (what this infra enables downstream)',
+        variant: "What's built (component, interfaces, design)",
+        successCriterion: 'Acceptance criteria (observable signals, not metric thresholds)',
+      };
+    case 'codebase':
+    case 'retroactive_codebase':
+      return {
+        hypothesis: 'Learning goal (what you want to be able to explain/modify after)',
+        variant: 'Files / modules to explore',
+        successCriterion: 'method.md must contain (default: module summaries, data flow, key abstractions, gotchas)',
+      };
+    case 'retroactive':
+      return {
+        hypothesis: 'Hypothesis (what was tested)',
+        variant: 'Variant (what was run)',
+        successCriterion: 'Success criterion (historical target)',
+      };
+    case 'ablation':
+    default:
+      return {
+        hypothesis: 'Hypothesis (what is being tested)',
+        variant: 'Variant (what changes from baseline)',
+        successCriterion: 'Success criterion (when do we call this a win)',
+      };
+  }
+}
+
+/**
  * Interactive workflow: ask user a series of questions,
  * then write both a brief markdown file and a pending row in experiments.jsonl.
  */
@@ -20,10 +59,13 @@ export async function createBriefCommand(draft?: AutoBriefDraft): Promise<void> 
   const totalSteps = existing.length > 0 ? 7 : 6;
   const stepLabel = (n: number) => `New Experiment Brief (${n}/${totalSteps})`;
 
+  // Get field labels based on detected mode
+  const labels = getFieldLabels(draft?.detected_mode);
+
   // ---------- Step 1: hypothesis ----------
   const hypothesis = await vscode.window.showInputBox({
     title: stepLabel(1),
-    prompt: 'Hypothesis — what are we testing?',
+    prompt: labels.hypothesis,
     placeHolder: 'e.g. DiT should match U-Net on toy MNIST diffusion',
     value: draft?.hypothesis,
     ignoreFocusOut: true
@@ -63,7 +105,7 @@ export async function createBriefCommand(draft?: AutoBriefDraft): Promise<void> 
   // ---------- Step 3: variant ----------
   const variant = await vscode.window.showInputBox({
     title: stepLabel(3 + stepOffset),
-    prompt: 'Variant — what changes vs. baseline?',
+    prompt: labels.variant,
     placeHolder: 'e.g. add weight_decay=0.05, switch to AdamW',
     value: draft?.variant,
     ignoreFocusOut: true
@@ -73,7 +115,7 @@ export async function createBriefCommand(draft?: AutoBriefDraft): Promise<void> 
   // ---------- Step 4: success criterion ----------
   const successCriterion = await vscode.window.showInputBox({
     title: stepLabel(4 + stepOffset),
-    prompt: 'Success criterion — when do we call this a win?',
+    prompt: labels.successCriterion,
     placeHolder: 'e.g. val_acc > 0.85 AND inference_latency < 50ms',
     value: draft?.success_criterion,
     ignoreFocusOut: true
@@ -159,7 +201,9 @@ export async function createBriefCommand(draft?: AutoBriefDraft): Promise<void> 
     method,
     baselineExperiment: baseline ? existing.find(e => e.id === baseline) : undefined,
     allExperiments: existing,
-    executionMode
+    executionMode,
+    detectedMode: draft?.detected_mode,
+    compositeNotes: draft?.composite_notes
   });
 
   // ---------- Write brief file ----------
@@ -221,14 +265,47 @@ interface BriefData {
   baselineExperiment?: Experiment;
   allExperiments: Experiment[];
   executionMode: 'agent' | 'human';
+  detectedMode?: AutoBriefDraft['detected_mode'];
+  compositeNotes?: string[];
 }
 
 function renderBrief(d: BriefData): string {
   const lines: string[] = [];
+
+  // Add mode preamble based on detected_mode
+  if (d.detectedMode === 'retroactive' || d.detectedMode === 'retroactive_infrastructure' || d.detectedMode === 'retroactive_codebase') {
+    lines.push('> **Retroactive registration** — capturing completed work. Agent will not re-run anything.');
+    lines.push('');
+  } else if (d.detectedMode === 'infrastructure') {
+    lines.push('> **Infrastructure brief** — success means the component works, not that a hypothesis was confirmed.');
+    lines.push('');
+  } else if (d.detectedMode === 'codebase') {
+    lines.push('> **Codebase understanding brief** — deliverable is a useful mental model captured in method.md, not a result.');
+    lines.push('');
+  }
+
+  // Add composite notes if present
+  if (d.compositeNotes && d.compositeNotes.length > 0) {
+    lines.push('> **Notes:**');
+    for (const note of d.compositeNotes) {
+      lines.push(`> - ${note}`);
+    }
+    lines.push('');
+  }
+
+  // Add -retro suffix defensive check
+  let methodLabel = d.method;
+  if ((d.detectedMode === 'retroactive'
+       || d.detectedMode === 'retroactive_infrastructure'
+       || d.detectedMode === 'retroactive_codebase')
+      && !methodLabel.endsWith('-retro')) {
+    methodLabel = methodLabel + '-retro';
+  }
+
   lines.push(`# ${d.id}: ${d.hypothesis}`);
   lines.push('');
   lines.push(`**Date:** ${d.date}`);
-  lines.push(`**Method label:** \`${d.method}\``);
+  lines.push(`**Method label:** \`${methodLabel}\``);
   if (d.baseline) {
     lines.push(`**Baseline:** \`${d.baseline}\``);
   }
@@ -368,6 +445,44 @@ function renderBrief(d: BriefData): string {
   lines.push('');
   lines.push(`7. Do not delete or modify existing lines in \`experiments.jsonl\`. The file is append-only history; Cairn folds by id when reading.`);
   lines.push('');
+
+  // Add mode-specific method.md content emphasis
+  if (d.detectedMode === 'infrastructure' || d.detectedMode === 'retroactive_infrastructure') {
+    lines.push('## method.md content emphasis (infrastructure mode)');
+    lines.push('');
+    lines.push('Use the 6 canonical sections with the following content focus:');
+    lines.push('1. Architecture — component structure, interfaces, where it plugs in');
+    lines.push('2. Hyperparameters — configuration parameters, default values');
+    lines.push("3. What's specifically different from baseline — N/A for greenfield; diff from existing if refactor");
+    lines.push('4. Design rationale — why this design vs alternatives');
+    lines.push('5. Design decisions worth noting — non-default choices, dependencies');
+    lines.push('6. Notable observations — gotchas, edge cases, performance characteristics');
+    lines.push('');
+  }
+
+  if (d.detectedMode === 'codebase' || d.detectedMode === 'retroactive_codebase') {
+    lines.push('## method.md content emphasis (codebase understanding mode)');
+    lines.push('');
+    lines.push('Use the 6 canonical sections with the following content focus:');
+    lines.push('1. Architecture — module overview, per-module 2-3 sentence summary');
+    lines.push('2. Hyperparameters — entry points, how to run/extend');
+    lines.push("3. What's specifically different from baseline — N/A (onboarding)");
+    lines.push('4. Design rationale — key abstractions, the 3-5 ideas the codebase is built around');
+    lines.push('5. Design decisions worth noting — data flow, input → output with shapes/types at boundaries');
+    lines.push('6. Notable observations — gotchas + open questions for human');
+    lines.push('');
+  }
+
+  if (d.detectedMode === 'retroactive' || d.detectedMode === 'retroactive_infrastructure' || d.detectedMode === 'retroactive_codebase') {
+    lines.push('## Retroactive mode reminder');
+    lines.push('');
+    lines.push('This is a RETROACTIVE registration. DO NOT re-run, re-train, or re-execute.');
+    lines.push('Your job is to read any referenced artifacts and populate method.md describing what WAS DONE (past tense).');
+    lines.push('If result numbers are provided, record verbatim in Notable observations.');
+    lines.push('Flag gaps where the historical record is incomplete.');
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 

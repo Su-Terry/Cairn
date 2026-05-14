@@ -6,6 +6,7 @@ import { changeStatusCommand } from './changeStatus';
 import { exportTableCommand } from './exportTable';
 import { Experiment } from './types';
 import { runAutoBrief } from './autoBrief';
+import { runAutoBriefFromFile } from './autoBriefFromFile';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Cairn extension activated');
@@ -42,6 +43,19 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
   context.subscriptions.push(autoBriefDisposable);
+
+  const autoBriefFromFileDisposable = vscode.commands.registerCommand(
+    'cairn.autoBriefFromFile',
+    async () => {
+      const draft = await runAutoBriefFromFile();
+      if (draft === undefined) {
+        // user cancelled or error already shown
+        return;
+      }
+      await createBriefCommand(draft);
+    }
+  );
+  context.subscriptions.push(autoBriefFromFileDisposable);
 
   const copyPromptDisposable = vscode.commands.registerCommand(
     'cairn.copyAgentPrompt',
