@@ -2,7 +2,7 @@
   "name": "cairn",
   "displayName": "Cairn",
   "description": "Mark every experiment with a stable waypoint",
-  "version": "0.12.0",
+  "version": "0.13.1",
   "publisher": "su-terry",
   "license": "MIT",
   "repository": {

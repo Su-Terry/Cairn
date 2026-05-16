@@ -18,4 +18,5 @@ export interface Experiment {
   methodFile?: string;     // path to methods/exp_NNN.md
   commitHash?: string;     // git commit at experiment completion
   executionMode?: 'agent' | 'human';
+  gitWorktreePath?: string;  // path to git worktree if experiment runs in isolated tree
 }
